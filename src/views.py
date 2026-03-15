@@ -86,7 +86,7 @@ def get_stock_price(symbol: str) -> float:
         return 0.0
 
 
-def get_operations(dataframe: pd.DataFrame, date: str, period: str = "M", expenditure: bool = True) -> pd.DataFrame:
+def get_operations(dataframe: pd.DataFrame, date: str, period: str = "M", expenditure: bool | None = None) -> pd.DataFrame:
     """Возвращает датафрейм из исходного за указанный период, где
       dataframe - исходный датафрейм,
       date - начальная дата для выборки,
@@ -122,7 +122,10 @@ def get_operations(dataframe: pd.DataFrame, date: str, period: str = "M", expend
     mask = (dataframe['Дата операции'] >= date) & (dataframe['Дата операции'] <= end_date)
 
     # Определяем логику по флагу expenditure
-    if expenditure:
+
+    if expenditure is None:
+        expenses = dataframe.loc[mask].copy() # Формируем датафрейм за период
+    elif expenditure:
         expenses = dataframe.loc[mask & (dataframe['Сумма платежа'] < 0)].copy()  # Формируем датафрейм с тратами
     else:
         expenses = dataframe.loc[mask & (dataframe['Сумма платежа'] > 0)].copy()  # Формируем датафрейм с поступлениями
@@ -147,7 +150,7 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
 
     # РАСХОДЫ --------------------------------------
     # Формируем датафрейм за нужный период c тратами
-    df_expenses_period = get_operations(dataframe, date, period)
+    df_expenses_period = get_operations(dataframe, date, period, True)
 
     # Список категорий-исключений
     transfer_categories = ["Переводы", "Наличные"]
@@ -158,7 +161,7 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
 
     # Группируем по категориям
     expenses_categories = (
-        expenses_df.groupby('Категория')['Сумма операции']
+        expenses_df.groupby("Категория")["Сумма операции"]
         .sum()
         .abs()  # делаем суммы положительными для наглядности
         .sort_values(ascending=False)  # Сортировка по убыванию
