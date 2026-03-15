@@ -1,38 +1,11 @@
-# json # requests # API # datetime # logging # pytest # pandas
-
-"""Реализуйте набор функций и главную функцию, принимающую на вход строку с датой и второй необязательный параметр — диапазон данных.
-По умолчанию диапазон равен одному месяцу (с начала месяца, на который выпадает дата, по саму дату).
-Возможные значения второго необязательного параметра:
-W
- — неделя, на которую приходится дата;
-M
- — месяц, на который приходится дата;
-Y
- — год, на который приходится дата;
-ALL
- — все данные до указанной даты.
-Возвращаемый JSON-ответ содержит следующие данные:
-«Расходы»:
-Общая сумма расходов.
-Раздел «Основные», в котором траты по категориям отсортированы по убыванию. Данные предоставляются по 7 категориям с наибольшими тратами, траты по остальным категориям суммируются и попадают в категорию «Остальное».
-Раздел «Переводы и наличные», в котором сумма по категориям «Наличные» и «Переводы» отсортирована по убыванию.
-«Поступления»:
-Общая сумма поступлений.
-Раздел «Основные», в котором поступления по категориям отсортированы по убыванию.
-Курс валют.
-Стоимость акций из S&P 500.
-"""
+import logging
 from datetime import datetime, timedelta
-
-"""Курсовая работа для skypro"""
-
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import requests
 import yfinance as yf
-import logging
 
 # Отключаем логирование для yfinance
 yf_logger = logging.getLogger("yfinance")
@@ -93,7 +66,7 @@ def get_operations(dataframe: pd.DataFrame, date: str, period: str = "M", expend
       dataframe - исходный датафрейм,
       date - начальная дата для выборки,
       period - W | M | Y (неделя, месяц, год), либо конечная дата,
-      expenditure - True/False (траты/попления)
+      expenditure - True/False (расходы/попления)
       """
 
     # Сортируем входной датафрейм по колонке дата в порядке убывания
@@ -132,18 +105,21 @@ def get_operations(dataframe: pd.DataFrame, date: str, period: str = "M", expend
     return expenses
 
 
-def get_summary_stats(dataframe: pd.DataFrame, date: str, period: str = "M") -> dict[str, Any]:
-    """Принимает на вход датафрейи, дату и период,
-      формат даты - dd/mm/YYYY, разделить любой,
-      period - W, M, Y, либо дата
+def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stocks: list[str], date: str, period: str = "M") -> dict[str, Any]:
+    """dataframe - исходный датафрейм,
+      list_currency - список валют,
+      my_stocks - списоск акций
+      date - начальная дата для выборки,
+      period - W | M | Y (неделя, месяц, год), либо конечная дата,
+      expenditure - True/False (расходы/попления)
       возвращает json-ответ:
         expenses - траты по категориям,
         income - поступления,
-        currency_rates - курсы валют,
-        stock_prices - стоимость акций
+        currency_rates - курсы валют на текущий день,
+        stock_prices - стоимость акций на текущий день
       """
-    # РАСХОДЫ
 
+    # РАСХОДЫ --------------------------------------
     # Формируем датафрейм за нужный период c тратами
     df_expenses_period = get_operations(dataframe, date, period)
 
@@ -195,8 +171,7 @@ def get_summary_stats(dataframe: pd.DataFrame, date: str, period: str = "M") -> 
     # Подсчет итоговой суммы
     total_expenses_amn = round(float(abs(expenses_df['Сумма операции'].sum())))
 
-    # ПОСТУПЛЕНИЯ
-
+    # ПОСТУПЛЕНИЯ --------------------------------------
     # Формируем датафрейм за нужный период c поступлениями
     df_income_period = get_operations(dataframe, date, period, False)
 
@@ -218,12 +193,9 @@ def get_summary_stats(dataframe: pd.DataFrame, date: str, period: str = "M") -> 
     # Подсчет итоговой суммы
     total_income_amn = round(float(abs(df_income_period['Сумма операции'].sum())))
 
-    # КУРСЫ ВАЛЮТ
+    # КУРСЫ ВАЛЮТ --------------------------------------
     base_code = "RUB" # Базовая валюта
     current_rates = get_ExchangeRate(base_code) # Загружаем курсы
-
-    # Список валют
-    list_currency = ["USD", "EUR"]
 
     # Формируем список курсов валют
     list_rate = []
@@ -235,18 +207,11 @@ def get_summary_stats(dataframe: pd.DataFrame, date: str, period: str = "M") -> 
             price_in_rub = round(1 / rate, 2)
             list_rate.append({"currency": item, "rate": price_in_rub})
 
-
-
-    # СТОИМОСТЬ АКЦИЙ
-    my_stocks = ["AAPL", "MSFT", "NVDA", "AMZN", "BRK.B", "JPM", "WMT"]
-
     # Формируем список стоимости акций
     stock_prices_list = []
 
     for stock in my_stocks:
         stock_prices_list.append({"stock": stock, "price": get_stock_price(stock)})
-
-
 
     # Сборка финальной структуры
     result = {
@@ -263,16 +228,4 @@ def get_summary_stats(dataframe: pd.DataFrame, date: str, period: str = "M") -> 
         "stock_prices": stock_prices_list
     }
 
-
-
-    print(result)
-
-
-path_file_xlsx = "../data/operations.xlsx"
-df = load_xlsx(path_file_xlsx)
-start_d = input("Введите начальную дату: ")
-period_in = input("Введите период: ")
-get_summary_stats(df, start_d, period_in)
-#print(get_stock_price(["NVDA"]))
-#print(get_stock_price("MSFT"))
-
+    return result
