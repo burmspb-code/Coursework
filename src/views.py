@@ -9,65 +9,80 @@ import requests
 import yfinance as yf
 from dotenv import load_dotenv
 
+from src.logger.config import setup_logger
+
 load_dotenv()
 
 # Отключаем логирование для yfinance
 yf_logger = logging.getLogger("yfinance")
 yf_logger.setLevel(logging.CRITICAL)
-yf_logger.addHandler(logging.NullHandler()) # Создаем пустой обработчик
-yf_logger.propagate = False # Запрет распространения логов наверх
+yf_logger.addHandler(logging.NullHandler())  # Создаем пустой обработчик
+yf_logger.propagate = False  # Запрет распространения логов наверх
+
+# Создаем объект логера для transaction_analyzer
+logger = setup_logger("views")
 
 
 def load_xlsx(path_file: str | Path) -> pd.DataFrame:
     """Функция загрузки xlsx данных из указнанного файла"""
 
+    logger.info("Загрузка xlsx файла")
     try:
         if path_file:
             return pd.read_excel(path_file)
         else:
             return pd.DataFrame()
     except Exception as e:
-        print(f"Ошибка загрузки файла: {e}")
+        logger.warning(f"Ошибка загрузки файла xlsx: {e}")
         return pd.DataFrame()
+
 
 def get_ExchangeRate(currency: str) -> dict[str, Any]:
     """Полуение курса валюты через API сайта ExchangeRate"""
 
+
     # Извлекаем ключ из переменных окружения
     API_KEY = os.getenv("EXCHANGE_RATE_API_KEY")
     if not API_KEY:
-        print(f"Ошибка - ключ не найден")
+        logger.warning(f"Ошибка - ключ для ExchangeRate не найден ")
         return {}
-
 
     URL = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/{currency}"
 
-    response = requests.get(URL)
-    return response.json()
+    try:
+        response = requests.get(URL)
+        response.raise_for_status()  # Проверка, что сайт ответил 200 OK
+
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.warning(f"Ошибка при запросе к ExchangeRate: {e}")
+        return {"error": str(e)}
+
 
 def get_stock_price(symbol: str) -> float:
     """Получение стоимости акции на текущую дату"""
 
+    logger.info(f"Получение данных по стоимости акций {symbol}")
     today = datetime.now().date()
-    if today.weekday() == 5: # Если запрос попал на субботу
+    if today.weekday() == 5:  # Если запрос попал на субботу
         trading_day = today - timedelta(days=1)
-    elif today.weekday() == 6: # Если запрос попал на возскресенье
+    elif today.weekday() == 6:  # Если запрос попал на возскресенье
         trading_day = today - timedelta(days=2)
     else:
         trading_day = today
 
-    end_day = trading_day + timedelta(days=1) # Прибавляем один день для диапазона поиска
+    end_day = trading_day + timedelta(days=1)  # Прибавляем один день для диапазона поиска
 
     data = yf.download(symbol, start=trading_day, end=end_day, progress=False)
 
     if data.empty:
-        print(f"Предупреждение: Данные для {symbol} не найдены")
+        logger.warning(f"Предупреждение: Данные для {symbol} не найдены")
         return 0.0
     try:
         price = data['Close'].iloc[0].item()
         return round(float(price), 2)
     except Exception as e:
-        print(f"Ошибка обработки данных для {symbol} {e}")
+        logger.warning(f"Ошибка обработки данных для {symbol} {e}")
         return 0.0
 
 
@@ -108,14 +123,15 @@ def get_operations(dataframe: pd.DataFrame, date: str, period: str = "M", expend
 
     # Определяем логику по флагу expenditure
     if expenditure:
-        expenses = dataframe.loc[mask & (dataframe['Сумма платежа'] < 0)].copy() # Формируем датафрейм с тратами
+        expenses = dataframe.loc[mask & (dataframe['Сумма платежа'] < 0)].copy()  # Формируем датафрейм с тратами
     else:
-        expenses = dataframe.loc[mask & (dataframe['Сумма платежа'] > 0)].copy() # Формируем датафрейм с поступлениями
+        expenses = dataframe.loc[mask & (dataframe['Сумма платежа'] > 0)].copy()  # Формируем датафрейм с поступлениями
 
     return expenses
 
 
-def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stocks: list[str], date: str, period: str = "M") -> dict[str, Any]:
+def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stocks: list[str], date: str,
+                      period: str = "M") -> dict[str, Any]:
     """dataframe - исходный датафрейм,
       list_currency - список валют,
       my_stocks - списоск акций
@@ -142,10 +158,10 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
 
     # Группируем по категориям
     expenses_categories = (
-            expenses_df.groupby('Категория')['Сумма операции']
-            .sum()
-            .abs()  # делаем суммы положительными для наглядности
-            .sort_values(ascending=False)  # Сортировка по убыванию
+        expenses_df.groupby('Категория')['Сумма операции']
+        .sum()
+        .abs()  # делаем суммы положительными для наглядности
+        .sort_values(ascending=False)  # Сортировка по убыванию
     )
 
     # Формируем ТОП-7 категорий
@@ -204,8 +220,9 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
     total_income_amn = round(float(abs(df_income_period['Сумма операции'].sum())))
 
     # КУРСЫ ВАЛЮТ --------------------------------------
-    base_code = "RUB" # Базовая валюта
-    current_rates = get_ExchangeRate(base_code) # Загружаем курсы
+    logger.info(f"Получение курса вылют {list_currency} с ресурса ExchangeRate")
+    base_code = "RUB"  # Базовая валюта
+    current_rates = get_ExchangeRate(base_code)  # Загружаем курсы
 
     # Формируем список курсов валют
     list_rate = []
@@ -217,8 +234,15 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
             if rate and rate != 0:
                 price_in_rub = round(1 / rate, 2)
                 list_rate.append({"currency": item, "rate": price_in_rub})
+                logger.info(f"Данные по валюте {item} получены")
+            else:
+                logger.warning(f"Ошибка при получение курса валюты {item}")
+    else:
+        logger.warning("Курсы валют не загруржены")
 
     # Формируем список стоимости акций
+
+    logger.info(f"Получение стоимости акций {my_stocks} из yfinance")
     stock_prices_list = []
 
     for stock in my_stocks:
@@ -238,5 +262,6 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
         "currency_rates": list_rate,
         "stock_prices": stock_prices_list
     }
+
 
     return result
