@@ -174,7 +174,7 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
 
     # Формируем раздел ОСНОВНЫЕ
     for cat, amn in top_7_expenses_categories.items():
-        main_expenses_list.append({"category: ": cat, "amount: ": round(amn)})
+        main_expenses_list.append({"category": cat, "amount": round(amn)})
 
     # Формируем раздел ПЕРЕВОДЫ/НАЛИЧНЫЕ
     transfers_data = (
@@ -188,11 +188,11 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
     )
     transfer_list = []
     for cat, amn in transfers_data.items():
-        transfer_list.append({"category: ": cat, "amount: ": round(amn)})
+        transfer_list.append({"category": cat, "amount": round(amn)})
 
     # Формируем раздел ОСТАЛЬНОЕ
     if others_sum > 0:
-        main_expenses_list.append({"category: ": "Остальное", "amount": round(others_sum)})
+        main_expenses_list.append({"category": "Остальное", "amount": round(others_sum)})
 
     # Подсчет итоговой суммы
     total_expenses_amn = round(float(abs(expenses_df['Сумма операции'].sum())))
@@ -214,7 +214,7 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
 
     # Формируем раздел ОСНОВНЫЕ
     for cat, amn in income_categories.items():
-        main_income_list.append({"category: ": cat, "amount: ": round(amn)})
+        main_income_list.append({"category": cat, "amount": round(amn)})
 
     # Подсчет итоговой суммы
     total_income_amn = round(float(abs(df_income_period['Сумма операции'].sum())))
@@ -262,6 +262,5 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
         "currency_rates": list_rate,
         "stock_prices": stock_prices_list
     }
-
 
     return result
