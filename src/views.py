@@ -158,7 +158,7 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
 
     # Группируем по категориям
     expenses_categories = (
-        expenses_df.groupby('Категория')['Сумма операции']
+        expenses_df.groupby("Категория")["Сумма операции"]
         .sum()
         .abs()  # делаем суммы положительными для наглядности
         .sort_values(ascending=False)  # Сортировка по убыванию
