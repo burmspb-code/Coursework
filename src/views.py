@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -6,6 +7,9 @@ from typing import Any
 import pandas as pd
 import requests
 import yfinance as yf
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Отключаем логирование для yfinance
 yf_logger = logging.getLogger("yfinance")
@@ -29,7 +33,13 @@ def load_xlsx(path_file: str | Path) -> pd.DataFrame:
 def get_ExchangeRate(currency: str) -> dict[str, Any]:
     """Полуение курса валюты через API сайта ExchangeRate"""
 
-    API_KEY = "05b5ef4495f3a491724965d7"
+    # Извлекаем ключ из переменных окружения
+    API_KEY = os.getenv("EXCHANGE_RATE_API_KEY")
+    if not API_KEY:
+        print(f"Ошибка - ключ не найден")
+        return {}
+
+
     URL = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/{currency}"
 
     response = requests.get(URL)
@@ -199,13 +209,14 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
 
     # Формируем список курсов валют
     list_rate = []
+    rates_dict = current_rates.get("conversion_rates") if current_rates else None
 
-    for item in list_currency:
-        rate = current_rates["conversion_rates"].get(item)
-        if rate:
-            # Рассчитываем обратный курс
-            price_in_rub = round(1 / rate, 2)
-            list_rate.append({"currency": item, "rate": price_in_rub})
+    if rates_dict:  # Если словарь с курсами существует
+        for item in list_currency:
+            rate = rates_dict.get(item)  # Берем курс конкретной валюты
+            if rate and rate != 0:
+                price_in_rub = round(1 / rate, 2)
+                list_rate.append({"currency": item, "rate": price_in_rub})
 
     # Формируем список стоимости акций
     stock_prices_list = []
