@@ -169,8 +169,7 @@ def test_get_operations_filter_income(sample_df):
 def test_get_operations_custom_date_period(sample_df):
     """Тест: передача конкретной конечной даты вместо W/M/Y"""
     # Период с 01.01 по 10.01
-    result = get_operations(sample_df, "01.01.2023", period="10.01.2023")
-
+    result = get_operations(sample_df, "01.01.2023", period="10.01.2023", expenditure=True)
     # В этом диапазоне только -1000.50 и 500.00
     # Но так как expenditure=True (по умолчанию), останется только расход
     assert len(result) == 1

@@ -1,35 +1,8 @@
-"""Выгодные категории повышенного кешбэка
-#json #datetime #logging #pytest
-
-Сервис позволяет проанализировать, какие категории были наиболее выгодными для выбора в качестве категорий повышенного кешбэка.
-
-Напишите функцию для анализа выгодности категорий повышенного кешбэка.
-
-На вход функции поступают данные для анализа, год и месяц.
-
-Входные параметры:
-data
- — данные с транзакциями;
-year
- — год, за который проводится анализ;
-month
- — месяц, за который проводится анализ.
-На выходе — JSON с анализом, сколько на каждой категории можно заработать кешбэка в указанном месяце года.
-
-Выходные параметры
-JSON с анализом, сколько на каждой категории можно заработать кешбэка.
-
-Формат выходных данных:
-
-{
-    "Категория 1": 1000,
-    "Категория 2": 2000,
-    "Категория 3": 500
-}"""
+"""Выгодные категории повышенного кешбэка"""
 
 import json
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
 
 import pandas as pd
 
@@ -61,14 +34,14 @@ def analyze_cashback_profit(dataframe: pd.DataFrame, year: str, month: str) -> s
         # Вычитаем один день, чтобы получить последний день текущего месяца
         last_day_obj = next_month - timedelta(days=1)
 
-        end_date_cash = last_day_obj.strftime("%d/%m/%Y") # Переводим в строку
+        end_date_cash = last_day_obj.strftime("%d/%m/%Y")  # Переводим в строку
 
     except (ValueError, TypeError) as e:
         logger.error(f"Ошибка при формировании дат: {e}")
         return json.dumps({}, ensure_ascii=False)
 
-
-    dataframe_for_period = get_operations(dataframe, start_date_cash, end_date_cash) # Получение данных за нужный период
+    dataframe_for_period = get_operations(dataframe, start_date_cash,
+                                          end_date_cash)  # Получение данных за нужный период
 
     try:
         if dataframe.empty:
@@ -81,7 +54,7 @@ def analyze_cashback_profit(dataframe: pd.DataFrame, year: str, month: str) -> s
         cashback_categories = (
             cashback_df.groupby("Категория")["Бонусы (включая кэшбэк)"]
             .sum()
-            .sort_index() # По алфавиту
+            .sort_index()  # По алфавиту
         )
 
         # Превращаем результат группировки в словарь Python
