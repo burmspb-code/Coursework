@@ -1,3 +1,5 @@
+"""Сервисы"""
+
 import logging
 import os
 from datetime import datetime, timedelta
@@ -91,7 +93,7 @@ def get_operations(dataframe: pd.DataFrame, date: str, period: str = "M", expend
       dataframe - исходный датафрейм,
       date - начальная дата для выборки,
       period - W | M | Y (неделя, месяц, год), либо конечная дата,
-      expenditure - True/False (расходы/попления)
+      expenditure - True/False (расходы/пополнения)
       """
 
     # Сортируем входной датафрейм по колонке дата в порядке убывания
@@ -122,7 +124,6 @@ def get_operations(dataframe: pd.DataFrame, date: str, period: str = "M", expend
     mask = (dataframe['Дата операции'] >= date) & (dataframe['Дата операции'] <= end_date)
 
     # Определяем логику по флагу expenditure
-
     if expenditure is None:
         expenses = dataframe.loc[mask].copy() # Формируем датафрейм за период
     elif expenditure:
