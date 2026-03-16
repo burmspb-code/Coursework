@@ -36,9 +36,9 @@ def report_to_excel(filename_default: Optional[Union[str, Callable]] = None):
             else:
                 file_name = filename
 
-            # Создаем путь к папке reports
-            data_dir = Path("reports")
-            data_dir.mkdir(exist_ok=True)  # Создаст папку, если её нет
+            # Поднимаемся на уровень выше от текущей папки и создаем там 'reports'
+            data_dir = Path.cwd().parent / "reports"
+            data_dir.mkdir(exist_ok=True)
 
             # Полный путь к файлу внутри папки data
             save_path = data_dir / Path(file_name)
