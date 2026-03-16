@@ -48,3 +48,11 @@ def sample_data():
         "Сумма": [100, 200, 500, 1000]
     }
     return pd.DataFrame(data)
+
+@pytest.fixture
+def sample_df_main():
+    return pd.DataFrame({
+        'Дата': ['01.11.2021', '03.11.2021'],
+        'Категория': ['Продукты', 'Аптеки'],
+        'Сумма': [-100, -500]
+    })

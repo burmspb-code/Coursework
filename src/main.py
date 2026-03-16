@@ -4,7 +4,7 @@ import pandas as pd
 from src.logger.config import setup_logger
 from src.reports import spending_by_category, report_to_excel
 from src.services import analyze_cashback_profit
-from views import load_xlsx, get_summary_stats
+from src.views import load_xlsx, get_summary_stats
 
 logger = setup_logger("main")
 
@@ -40,7 +40,7 @@ def run_reports_analysis(df: pd.DataFrame, path_file: str | Path) -> None:
     if not df.empty:  # Если данные получены
         date = "01.01.2020"
         category = "Ж/д билеты"
-        df_data = spending_by_category(df, category)
+        df_data = spending_by_category(df, category, date)
         print(df_data)
         logger.info("Анализ завершен")
     else:
@@ -48,12 +48,12 @@ def run_reports_analysis(df: pd.DataFrame, path_file: str | Path) -> None:
 
 def run_reports_analysis_to_file(df: pd.DataFrame, path_file: str | Path) -> None:
     """Проверка работы декаратора для записи в файл"""
-    logger.info("Анализ трат по категориям, запись в фаайл")
+    logger.info("Анализ трат по категориям, запись в файл")
     if not df.empty:  # Если данные получены
         date = "01.01.2020"
-        # Созраняем с заданным именем файла
+        # Сохраняем с заданным именем файла
         df_data = spending_by_category(df, category="Аптеки", date=date, filename="pharmacies_report.xlsx")
-        # Сохрагяем с именем файла по умолчанию
+        # Сохраняем с именем файла по умолчанию
         df_data = spending_by_category(df, category="Аптеки", date=date)
         logger.info("Анализ завершен")
     else:
@@ -63,8 +63,12 @@ def run_reports_analysis_to_file(df: pd.DataFrame, path_file: str | Path) -> Non
 if __name__ == '__main__':
 
     # Загрузка данных с транзакциями
-    transaction_data_path = "../data/operations.xlsx" # Путь к файлу с данными
-    dataframe = load_xlsx(transaction_data_path) # Загрузка данных в датафрейм
+    transaction_data_path = "../data/operations.xlsx"  # Путь к файлу с данными
+    try:
+        dataframe = load_xlsx(transaction_data_path)
+    except FileNotFoundError:
+        logger.error(f"Файл не найден: {transaction_data_path}")
+        dataframe = pd.DataFrame()
 
     # Проверка работы модуля views
     run_views_analysis(dataframe, transaction_data_path)
