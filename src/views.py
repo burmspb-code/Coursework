@@ -40,7 +40,7 @@ def load_xlsx(path_file: str | Path) -> pd.DataFrame:
 
 
 def get_ExchangeRate(currency: str) -> dict[str, Any]:
-    """Полуение курса валюты через API сайта ExchangeRate"""
+    """Получение курса валюты через API сайта ExchangeRate"""
 
 
     # Извлекаем ключ из переменных окружения
@@ -136,7 +136,8 @@ def get_operations(dataframe: pd.DataFrame, date: str, period: str = "M", expend
 
 def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stocks: list[str], date: str,
                       period: str = "M") -> dict[str, Any]:
-    """dataframe - исходный датафрейм,
+    """Формирует данные в формате JSON, где
+      dataframe - исходный датафрейм,
       list_currency - список валют,
       my_stocks - списоск акций
       date - начальная дата для выборки,
