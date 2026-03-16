@@ -1,19 +1,21 @@
 from pathlib import Path
+
 import pandas as pd
 
 from src.logger.config import setup_logger
-from src.reports import spending_by_category, report_to_excel
+from src.reports import spending_by_category
 from src.services import analyze_cashback_profit
-from src.views import load_xlsx, get_summary_stats
+from src.views import get_summary_stats, load_xlsx
 
 logger = setup_logger("main")
+
 
 def run_views_analysis(df: pd.DataFrame, path_file: str | Path) -> None:
     """Проверка работы модуля views"""
     logger.info("Анализ статистики по категориям, получение курса валют и стоимости акций")
-    if not df.empty: # Если данные получены
-        list_currency = ["USD", "EUR", "JPY", "GBP"] # Список с валютами
-        my_stocks = ["AAPL", "AMZN", "GOOGL", "MSFT", "TSLA"] # Список с акциями
+    if not df.empty:  # Если данные получены
+        list_currency = ["USD", "EUR", "JPY", "GBP"]  # Список с валютами
+        my_stocks = ["AAPL", "AMZN", "GOOGL", "MSFT", "TSLA"]  # Список с акциями
         date = "03.11.2021"
         period = "30.12.2021"
         json_data = get_summary_stats(df, list_currency, my_stocks, date, period)
@@ -21,6 +23,7 @@ def run_views_analysis(df: pd.DataFrame, path_file: str | Path) -> None:
         logger.info("Анализ завершен")
     else:
         logger.warning(f"Данные по указанному пути {path_file} отсутствуют")
+
 
 def run_services_analysis(df: pd.DataFrame, path_file: str | Path) -> None:
     """Проверка работы модуля services"""
@@ -34,6 +37,7 @@ def run_services_analysis(df: pd.DataFrame, path_file: str | Path) -> None:
     else:
         logger.warning(f"Данные по указанному пути {path_file} отсутствуют")
 
+
 def run_reports_analysis(df: pd.DataFrame, path_file: str | Path) -> None:
     """Проверка работы модуля reports"""
     logger.info("Анализ трат по категориям")
@@ -46,21 +50,22 @@ def run_reports_analysis(df: pd.DataFrame, path_file: str | Path) -> None:
     else:
         logger.warning(f"Данные по указанному пути {path_file} отсутствуют")
 
+
 def run_reports_analysis_to_file(df: pd.DataFrame, path_file: str | Path) -> None:
     """Проверка работы декаратора для записи в файл"""
     logger.info("Анализ трат по категориям, запись в файл")
     if not df.empty:  # Если данные получены
         date = "01.01.2020"
         # Сохраняем с заданным именем файла
-        df_data = spending_by_category(df, category="Аптеки", date=date, filename="pharmacies_report.xlsx")
+        spending_by_category(df, category="Аптеки", date=date, filename="pharmacies_report.xlsx")
         # Сохраняем с именем файла по умолчанию
-        df_data = spending_by_category(df, category="Аптеки", date=date)
+        spending_by_category(df, category="Аптеки", date=date)
         logger.info("Анализ завершен")
     else:
         logger.warning(f"Данные по указанному пути {path_file} отсутствуют")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     # Загрузка данных с транзакциями
     transaction_data_path = "../data/operations.xlsx"  # Путь к файлу с данными
@@ -81,4 +86,3 @@ if __name__ == '__main__':
 
     # Проверка записи в файл для модуля reports
     run_reports_analysis_to_file(dataframe, transaction_data_path)
-

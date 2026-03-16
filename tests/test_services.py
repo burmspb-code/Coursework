@@ -2,12 +2,10 @@ import json
 
 import pandas as pd
 
-from src.views import get_operations
 from src.services import analyze_cashback_profit
 
 
-
-def test_analyze_cashback_profit_success(sample_df_services): # Имя совпадает с фикстурой
+def test_analyze_cashback_profit_success(sample_df_services):  # Имя совпадает с фикстурой
     result_json = analyze_cashback_profit(sample_df_services, "2024", "03")
     result = json.loads(result_json)
 
@@ -18,10 +16,9 @@ def test_analyze_cashback_profit_success(sample_df_services): # Имя совп�
 
 def test_analyze_cashback_empty_df():
     # Создаем пустой DF со всеми нужными колонками
-    empty_df = pd.DataFrame(columns=[
-        "Дата операции", "Категория", "Кэшбэк",
-        "Бонусы (включая кэшбэк)", "Сумма платежа"
-    ])
+    empty_df = pd.DataFrame(
+        columns=["Дата операции", "Категория", "Кэшбэк", "Бонусы (включая кэшбэк)", "Сумма платежа"]
+    )
     result = analyze_cashback_profit(empty_df, "2024", "03")
     assert result == "{}"
 
@@ -39,7 +36,7 @@ def test_analyze_cashback_december_transition():
         "Категория": ["Супермаркеты", "Аптеки"],
         "Кэшбэк": [100, 50],
         "Бонусы (включая кэшбэк)": [100, 50],
-        "Сумма платежа": [1000, 500]
+        "Сумма платежа": [1000, 500],
     }
     df = pd.DataFrame(data)
 

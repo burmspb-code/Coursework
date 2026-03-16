@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 import requests
@@ -42,11 +42,10 @@ def load_xlsx(path_file: str | Path) -> pd.DataFrame:
 def get_ExchangeRate(currency: str) -> dict[str, Any]:
     """Получение курса валюты через API сайта ExchangeRate"""
 
-
     # Извлекаем ключ из переменных окружения
     API_KEY = os.getenv("EXCHANGE_RATE_API_KEY")
     if not API_KEY:
-        logger.warning(f"Ошибка - ключ для ExchangeRate не найден ")
+        logger.warning("Ошибка - ключ для ExchangeRate не найден")
         return {}
 
     URL = f"https://v6.exchangerate-api.com/v6/{API_KEY}/latest/{currency}"
@@ -55,7 +54,7 @@ def get_ExchangeRate(currency: str) -> dict[str, Any]:
         response = requests.get(URL)
         response.raise_for_status()  # Проверка, что сайт ответил 200 OK
 
-        return response.json()
+        return cast(dict[str, Any], response.json())
     except requests.exceptions.RequestException as e:
         logger.warning(f"Ошибка при запросе к ExchangeRate: {e}")
         return {"error": str(e)}
@@ -81,74 +80,80 @@ def get_stock_price(symbol: str) -> float:
         logger.warning(f"Предупреждение: Данные для {symbol} не найдены")
         return 0.0
     try:
-        price = data['Close'].iloc[0].item()
+        price = data["Close"].iloc[0].item()
         return round(float(price), 2)
     except Exception as e:
         logger.warning(f"Ошибка обработки данных для {symbol} {e}")
         return 0.0
 
 
-def get_operations(dataframe: pd.DataFrame, date: str, period: str = "M", expenditure: bool | None = None) -> pd.DataFrame:
+def get_operations(
+    dataframe: pd.DataFrame, date: str, period: str = "M", expenditure: bool | None = None
+) -> pd.DataFrame:
     """Возвращает датафрейм из исходного за указанный период, где
-      dataframe - исходный датафрейм,
-      date - начальная дата для выборки,
-      period - W | M | Y (неделя, месяц, год), либо конечная дата,
-      expenditure - True/False (расходы/пополнения)
-      """
+    dataframe - исходный датафрейм,
+    date - начальная дата для выборки,
+    period - W | M | Y (неделя, месяц, год), либо конечная дата,
+    expenditure - True/False (расходы/пополнения)
+    """
 
     # Сортируем входной датафрейм по колонке дата в порядке убывания
-    dataframe = dataframe.sort_values('Дата операции', ascending=False)
+    dataframe = dataframe.sort_values("Дата операции", ascending=False)
 
     # Конвертируем входную строку даты в объект datetime
     start_date = pd.to_datetime(date, dayfirst=True)
 
     # Подготовка данных даты в datetime
-    dataframe['Дата операции'] = pd.to_datetime(dataframe['Дата операции'], dayfirst=True)
+    dataframe["Дата операции"] = pd.to_datetime(dataframe["Дата операции"], dayfirst=True)
+
+    # pd.DateOffset — это инструмент в pandas, который позволяет прибавлять или вычитать календарное время из дат
+    # (объектов Timestamp), учитывая особенности календаря
 
     offset = {"W": {"weeks": 1}, "M": {"months": 1}, "Y": {"years": 1}}
     if period.upper() in offset:
-        end_date = start_date + pd.DateOffset(**offset[period.upper()]) - pd.Timedelta(seconds=1)
+        end_date = start_date + pd.DateOffset(**offset[period.upper()]) - pd.Timedelta(seconds=1)  # type: ignore
     else:
         end_date = pd.to_datetime(period.upper(), dayfirst=True) + pd.DateOffset(days=1)
 
     # Заменяем запятую на точку и убираем лишние пробелы, чтобы конвертировать в float
-    dataframe['Сумма платежа'] = (
-        dataframe['Сумма платежа']
+    dataframe["Сумма платежа"] = (
+        dataframe["Сумма платежа"]
         .astype(str)
-        .str.replace(',', '.')
-        .str.replace(r'\s+', '', regex=True)  # убираем любые пробелы
+        .str.replace(",", ".")
+        .str.replace(r"\s+", "", regex=True)  # убираем любые пробелы
         .astype(float)
     )
 
     # Фильтруем маску периода
-    mask = (dataframe['Дата операции'] >= date) & (dataframe['Дата операции'] <= end_date)
+    mask = (dataframe["Дата операции"] >= date) & (dataframe["Дата операции"] <= end_date)
 
     # Определяем логику по флагу expenditure
     if expenditure is None:
-        expenses = dataframe.loc[mask].copy() # Формируем датафрейм за период
+        expenses = dataframe.loc[mask].copy()  # Формируем датафрейм за период
     elif expenditure:
-        expenses = dataframe.loc[mask & (dataframe['Сумма платежа'] < 0)].copy()  # Формируем датафрейм с тратами
+        expenses = dataframe.loc[mask & (dataframe["Сумма платежа"] < 0)].copy()  # Формируем датафрейм с тратами
     else:
-        expenses = dataframe.loc[mask & (dataframe['Сумма платежа'] > 0)].copy()  # Формируем датафрейм с поступлениями
+        expenses = dataframe.loc[mask & (dataframe["Сумма платежа"] > 0)].copy()  # Формируем датафрейм с поступлениями
 
     return expenses
 
 
-def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stocks: list[str], date: str,
-                      period: str = "M") -> dict[str, Any]:
+def get_summary_stats(
+    dataframe: pd.DataFrame, list_currency: list[str], my_stocks: list[str], date: str, period: str = "M"
+) -> dict[str, Any]:
     """Формирует данные в формате JSON, где
-      dataframe - исходный датафрейм,
-      list_currency - список валют,
-      my_stocks - списоск акций
-      date - начальная дата для выборки,
-      period - W | M | Y (неделя, месяц, год), либо конечная дата,
-      expenditure - True/False (расходы/попления)
-      возвращает json-ответ:
-        expenses - траты по категориям,
-        income - поступления,
-        currency_rates - курсы валют на текущий день,
-        stock_prices - стоимость акций на текущий день
-      """
+    dataframe - исходный датафрейм,
+    list_currency - список валют,
+    my_stocks - списоск акций
+    date - начальная дата для выборки,
+    period - W | M | Y (неделя, месяц, год), либо конечная дата,
+    expenditure - True/False (расходы/попления)
+    возвращает json-ответ:
+      expenses - траты по категориям,
+      income - поступления,
+      currency_rates - курсы валют на текущий день,
+      stock_prices - стоимость акций на текущий день
+    """
 
     # РАСХОДЫ --------------------------------------
     # Формируем датафрейм за нужный период c тратами
@@ -184,10 +189,10 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
     # Формируем раздел ПЕРЕВОДЫ/НАЛИЧНЫЕ
     transfers_data = (
         df_expenses_period[
-            (df_expenses_period['Сумма операции'] < 0) &
-            (df_expenses_period['Категория'].isin(transfer_categories))  # Берем ТОЛЬКО нужные
-            ]
-        .groupby('Категория')['Сумма операции']
+            (df_expenses_period["Сумма операции"] < 0)
+            & (df_expenses_period["Категория"].isin(transfer_categories))  # Берем ТОЛЬКО нужные
+        ]
+        .groupby("Категория")["Сумма операции"]
         .sum()
         .abs()
     )
@@ -200,7 +205,7 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
         main_expenses_list.append({"category": "Остальное", "amount": round(others_sum)})
 
     # Подсчет итоговой суммы
-    total_expenses_amn = round(float(abs(expenses_df['Сумма операции'].sum())))
+    total_expenses_amn = round(float(abs(expenses_df["Сумма операции"].sum())))
 
     # ПОСТУПЛЕНИЯ --------------------------------------
     # Формируем датафрейм за нужный период c поступлениями
@@ -208,7 +213,7 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
 
     # Группируем по категориям
     income_categories = (
-        df_income_period.groupby('Категория')['Сумма операции']
+        df_income_period.groupby("Категория")["Сумма операции"]
         .sum()
         .abs()  # делаем суммы положительными для наглядности
         .sort_values(ascending=False)  # Сортировка по убыванию
@@ -222,7 +227,7 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
         main_income_list.append({"category": cat, "amount": round(amn)})
 
     # Подсчет итоговой суммы
-    total_income_amn = round(float(abs(df_income_period['Сумма операции'].sum())))
+    total_income_amn = round(float(abs(df_income_period["Сумма операции"].sum())))
 
     # КУРСЫ ВАЛЮТ --------------------------------------
     logger.info(f"Получение курса вылют {list_currency} с ресурса ExchangeRate")
@@ -258,14 +263,11 @@ def get_summary_stats(dataframe: pd.DataFrame, list_currency: list[str], my_stoc
         "expenses": {
             "total_amount": total_expenses_amn,
             "main": main_expenses_list,
-            "transfers_and_cash": transfer_list
+            "transfers_and_cash": transfer_list,
         },
-        "income": {
-            "total_amount": total_income_amn,
-            "main": main_income_list
-        },
+        "income": {"total_amount": total_income_amn, "main": main_income_list},
         "currency_rates": list_rate,
-        "stock_prices": stock_prices_list
+        "stock_prices": stock_prices_list,
     }
 
     return result
