@@ -1,11 +1,10 @@
 from datetime import datetime
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
-import pytest
-from unittest.mock import patch, MagicMock
 import requests
 
-from src.views import get_ExchangeRate, load_xlsx, get_stock_price, get_operations, get_summary_stats
+from src.views import get_ExchangeRate, get_operations, get_stock_price, get_summary_stats, load_xlsx
 
 
 @patch("os.getenv")
@@ -105,7 +104,7 @@ def test_get_stock_price_success(mock_datetime, mock_yf_download):
     # Проверяем, что скачивали за правильный период
     mock_yf_download.assert_called_once()
     args, kwargs = mock_yf_download.call_args
-    assert kwargs['start'] == datetime(2023, 10, 23).date()
+    assert kwargs["start"] == datetime(2023, 10, 23).date()
 
 
 @patch("src.views.yf.download")
@@ -123,7 +122,7 @@ def test_get_stock_price_weekend_adjustment(mock_datetime, mock_yf_download):
     # В субботу (5) trading_day должен стать пятницей (today - 1 день)
     # 2023-10-21 - 1 день = 2023-10-20
     args, kwargs = mock_yf_download.call_args
-    assert kwargs['start'] == datetime(2023, 10, 20).date()
+    assert kwargs["start"] == datetime(2023, 10, 20).date()
 
 
 @patch("src.views.yf.download")
@@ -152,8 +151,8 @@ def test_get_operations_filter_month_expenses(sample_df):
 
     assert len(result) == 2
     # Так как сортировка ascending=False, первым будет 15.01 (-2000.0)
-    assert result['Сумма платежа'].iloc[0] == -2000.0
-    assert result['Сумма платежа'].iloc[1] == -1000.50
+    assert result["Сумма платежа"].iloc[0] == -2000.0
+    assert result["Сумма платежа"].iloc[1] == -1000.50
 
 
 def test_get_operations_filter_income(sample_df):
@@ -162,8 +161,8 @@ def test_get_operations_filter_income(sample_df):
 
     # 500.00 и 1500.00
     assert len(result) == 2
-    assert (result['Сумма платежа'] > 0).all()
-    assert 1500.00 in result['Сумма платежа'].values
+    assert (result["Сумма платежа"] > 0).all()
+    assert 1500.00 in result["Сумма платежа"].values
 
 
 def test_get_operations_custom_date_period(sample_df):
@@ -173,7 +172,7 @@ def test_get_operations_custom_date_period(sample_df):
     # В этом диапазоне только -1000.50 и 500.00
     # Но так как expenditure=True (по умолчанию), останется только расход
     assert len(result) == 1
-    assert result['Дата операции'].iloc[0].day == 1
+    assert result["Дата операции"].iloc[0].day == 1
 
 
 def test_get_operations_sorting(sample_df):
@@ -181,7 +180,7 @@ def test_get_operations_sorting(sample_df):
     result = get_operations(sample_df, "01.01.2023", period="M", expenditure=True)
 
     # 15.01 должно быть выше чем 01.01
-    dates = result['Дата операции'].tolist()
+    dates = result["Дата операции"].tolist()
     assert dates[0] > dates[1]
 
 
@@ -201,11 +200,7 @@ def test_get_summary_stats_success(mock_get_rate, mock_get_stock, complex_df):
     mock_get_stock.return_value = 150.0
 
     result = get_summary_stats(
-        dataframe=complex_df,
-        list_currency=["USD"],
-        my_stocks=["AAPL"],
-        date="01.01.2023",
-        period="M"
+        dataframe=complex_df, list_currency=["USD"], my_stocks=["AAPL"], date="01.01.2023", period="M"
     )
 
     # 1. Проверяем расходы (Еда 100 + Транспорт 200 + Связь 50 = 350)

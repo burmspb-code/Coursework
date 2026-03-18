@@ -4,7 +4,7 @@ import functools
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union, Callable
+from typing import Any, Callable, Optional, Union
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta  # Умеет работать с месяцами по разному количеству дней
@@ -14,12 +14,12 @@ from src.logger.config import setup_logger
 logger = setup_logger("reports")
 
 
-def report_to_excel(filename_default: Optional[Union[str, Callable]] = None):
+def report_to_excel(filename_default: Optional[Union[str, Callable]] = None) -> Callable:
     """Декоратор для записи результата DataFrame в Excel файл."""
 
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
 
             # Извлекаем filename, чтобы он не ушел в саму функцию
             filename = kwargs.pop("filename", None)
@@ -46,7 +46,7 @@ def report_to_excel(filename_default: Optional[Union[str, Callable]] = None):
             # Сохраняем результат
             if isinstance(result, pd.DataFrame):
                 df_to_save: pd.DataFrame = result  # type: ignore
-                df_to_save.to_excel(save_path, index=False, engine='openpyxl')
+                df_to_save.to_excel(save_path, index=False, engine="openpyxl")
                 logger.info(f"Отчет успешно сохранен: {save_path}")
             else:
                 logger.warning("Результат функции не является DataFrame, пропуск записи.")
@@ -65,7 +65,6 @@ def report_to_excel(filename_default: Optional[Union[str, Callable]] = None):
 @report_to_excel
 def spending_by_category(transactions: pd.DataFrame, category: str, date: Optional[str] = None) -> pd.DataFrame:
     """Возвращает траты по заданной категории за последние три месяца от переданной даты"""
-
     # Создаем локальную копию, чтобы не портить исходный DataFrame
     df = transactions.copy()
 
@@ -73,13 +72,13 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
 
     if date is None:
         # Фильтруем по категории
-        mask = (df["Категория"] == category)
+        mask = df["Категория"] == category
         return df.loc[mask]
     else:
         try:
             # Формируем начальную дату
             # Заменяем точки, слэши и пробелы на тире
-            clean_date = re.sub(r'[./ ]', '-', date)
+            clean_date = re.sub(r"[./ ]", "-", date)
             start_date = datetime.strptime(clean_date, "%d-%m-%Y")
 
             # Приводим колонку с датами в DF к формату datetime для сравнения
@@ -89,9 +88,9 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
             end_date = start_date + relativedelta(months=3)
 
             # Фильтруем: категория + интервал в 3 месяца
-            mask = (df["Категория"] == category) & \
-                   (df["Дата операции"] >= start_date) & \
-                   (df["Дата операции"] < end_date)
+            mask = (
+                (df["Категория"] == category) & (df["Дата операции"] >= start_date) & (df["Дата операции"] < end_date)
+            )
 
             return df.loc[mask]
 

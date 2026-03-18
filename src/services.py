@@ -13,13 +13,14 @@ logger = setup_logger("services")
 
 
 def analyze_cashback_profit(dataframe: pd.DataFrame, year: str, month: str) -> str:
-    """Анализ категории КЭШБЭК, где
-    dataframe - данные с транзакциями в формате pd.DataFrame,
-    year - год, за который проводится анализ,
-    month - месяц, за который проводится анализ.
+    """Полуение анализа категории КЭШБЭК в формате JSON,
+
+    Attributes:
+        dataframe: DataFrame - данные с транзакциями в формате pd.DataFrame,
+        year: str - год, за который проводится анализ,
+        month: str - месяц, за который проводится анализ.
     """
     logger.info("Анализ категорий кэшбэк")
-
     try:
         # Формируем начальную дату - первый день месяца нужного года
         start_date_cash = datetime.strptime(f"{year}-{month}-01", "%Y-%m-%d").strftime("%d/%m/%Y")
@@ -40,8 +41,9 @@ def analyze_cashback_profit(dataframe: pd.DataFrame, year: str, month: str) -> s
         logger.error(f"Ошибка при формировании дат: {e}")
         return json.dumps({}, ensure_ascii=False)
 
-    dataframe_for_period = get_operations(dataframe, start_date_cash,
-                                          end_date_cash)  # Получение данных за нужный период
+    dataframe_for_period = get_operations(
+        dataframe, start_date_cash, end_date_cash
+    )  # Получение данных за нужный период
 
     try:
         if dataframe.empty:
@@ -52,20 +54,14 @@ def analyze_cashback_profit(dataframe: pd.DataFrame, year: str, month: str) -> s
 
         # Группируем по категориям
         cashback_categories = (
-            cashback_df.groupby("Категория")["Бонусы (включая кэшбэк)"]
-            .sum()
-            .sort_index()  # По алфавиту
+            cashback_df.groupby("Категория")["Бонусы (включая кэшбэк)"].sum().sort_index()  # По алфавиту
         )
 
         # Превращаем результат группировки в словарь Python
         cashback_dict = cashback_categories.to_dict()
 
         # Превращаем словарь в JSON-строку
-        json_data = json.dumps(
-            cashback_dict,
-            ensure_ascii=False,  # Для русского текста
-            indent=4  # Для отступов
-        )
+        json_data = json.dumps(cashback_dict, ensure_ascii=False, indent=4)  # Для русского текста  # Для отступов
         return json_data
 
     except Exception as e:
