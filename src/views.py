@@ -27,7 +27,6 @@ logger = setup_logger("views")
 
 def load_xlsx(path_file: str | Path) -> pd.DataFrame:
     """Функция загрузки xlsx данных из указнанного файла"""
-
     logger.info("Загрузка xlsx файла")
     try:
         if path_file:
@@ -41,7 +40,6 @@ def load_xlsx(path_file: str | Path) -> pd.DataFrame:
 
 def get_ExchangeRate(currency: str) -> dict[str, Any]:
     """Получение курса валюты через API сайта ExchangeRate"""
-
     # Извлекаем ключ из переменных окружения
     API_KEY = os.getenv("EXCHANGE_RATE_API_KEY")
     if not API_KEY:
@@ -62,7 +60,6 @@ def get_ExchangeRate(currency: str) -> dict[str, Any]:
 
 def get_stock_price(symbol: str) -> float:
     """Получение стоимости акции на текущую дату"""
-
     logger.info(f"Получение данных по стоимости акций {symbol}")
     today = datetime.now().date()
     if today.weekday() == 5:  # Если запрос попал на субботу
@@ -90,11 +87,15 @@ def get_stock_price(symbol: str) -> float:
 def get_operations(
     dataframe: pd.DataFrame, date: str, period: str = "M", expenditure: bool | None = None
 ) -> pd.DataFrame:
-    """Возвращает датафрейм из исходного за указанный период, где
-    dataframe - исходный датафрейм,
-    date - начальная дата для выборки,
-    period - W | M | Y (неделя, месяц, год), либо конечная дата,
-    expenditure - True/False (расходы/пополнения)
+    """Возвращает датафрейм из исходного за указанный период,
+
+    Attributes:
+        dataframe: pd.DataFrame - исходный датафрейм,
+        date: str - начальная дата для выборки,
+        period: str - период, где W | M | Y (неделя, месяц, год),
+            либо конечная дата формата dd/mm/yyyy,
+        expenditure: bool | None = None, где True - расходы, False - пополнения,
+            None учитывает все транзакции.
     """
 
     # Сортируем входной датафрейм по колонке дата в порядке убывания
@@ -125,15 +126,20 @@ def get_operations(
     )
 
     # Фильтруем маску периода
-    mask = (dataframe["Дата операции"] >= date) & (dataframe["Дата операции"] <= end_date)
+    mask = (dataframe["Дата операции"] >= start_date) & (dataframe["Дата операции"] <= end_date)
 
+    expenses: pd.DataFrame  # Инициализиреум тип данных
     # Определяем логику по флагу expenditure
     if expenditure is None:
-        expenses = dataframe.loc[mask].copy()  # Формируем датафрейм за период
+        expenses = cast(pd.DataFrame, cast(Any, dataframe.loc[mask].copy()))  # Формируем датафрейм за период
     elif expenditure:
-        expenses = dataframe.loc[mask & (dataframe["Сумма платежа"] < 0)].copy()  # Формируем датафрейм с тратами
+        expenses = cast(
+            pd.DataFrame, cast(Any, dataframe.loc[mask & (dataframe["Сумма платежа"] < 0)].copy())
+        )  # Формируем датафрейм с тратами
     else:
-        expenses = dataframe.loc[mask & (dataframe["Сумма платежа"] > 0)].copy()  # Формируем датафрейм с поступлениями
+        expenses = cast(
+            pd.DataFrame, cast(Any, dataframe.loc[mask & (dataframe["Сумма платежа"] > 0)].copy())
+        )  # Формируем датафрейм с поступлениями
 
     return expenses
 
@@ -141,18 +147,21 @@ def get_operations(
 def get_summary_stats(
     dataframe: pd.DataFrame, list_currency: list[str], my_stocks: list[str], date: str, period: str = "M"
 ) -> dict[str, Any]:
-    """Формирует данные в формате JSON, где
-    dataframe - исходный датафрейм,
-    list_currency - список валют,
-    my_stocks - списоск акций
-    date - начальная дата для выборки,
-    period - W | M | Y (неделя, месяц, год), либо конечная дата,
-    expenditure - True/False (расходы/попления)
-    возвращает json-ответ:
-      expenses - траты по категориям,
-      income - поступления,
-      currency_rates - курсы валют на текущий день,
-      stock_prices - стоимость акций на текущий день
+    """Формирует данные в формате JSON,
+
+    Attributes:
+        dataframe: pd.DataFrame - исходный датафрейм,
+        list_currency: list[str] - список валют,
+        my_stocks: list[str] - списоск акций,
+        date: str - начальная дата для выборки,
+        period: str - период, где W | M | Y (неделя, месяц, год),
+            либо конечная дата формата dd/mm/yyyy,
+
+        возвращает json-ответ:
+          expenses - траты по категориям,
+          income - поступления,
+          currency_rates - курсы валют на текущий день,
+          stock_prices - стоимость акций на текущий день
     """
 
     # РАСХОДЫ --------------------------------------

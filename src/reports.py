@@ -65,7 +65,6 @@ def report_to_excel(filename_default: Optional[Union[str, Callable]] = None) -> 
 @report_to_excel
 def spending_by_category(transactions: pd.DataFrame, category: str, date: Optional[str] = None) -> pd.DataFrame:
     """Возвращает траты по заданной категории за последние три месяца от переданной даты"""
-
     # Создаем локальную копию, чтобы не портить исходный DataFrame
     df = transactions.copy()
 

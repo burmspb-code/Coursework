@@ -214,24 +214,3 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-
-# Настройки PyCharm (те самые файлы .xml и .iml со скриншота)
-.idea/
-*.iml
-
-# Виртуальное окружение
-venv/
-.venv/
-env/
-
-# Временные файлы Python
-__pycache__/
-*.py[cod]
-
-# Логи и отчеты
-*.log
-.pytest_cache/
-htmlcov/
-
-# Конфиденциальные данные
-.env

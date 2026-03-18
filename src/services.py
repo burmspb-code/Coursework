@@ -13,13 +13,14 @@ logger = setup_logger("services")
 
 
 def analyze_cashback_profit(dataframe: pd.DataFrame, year: str, month: str) -> str:
-    """Анализ категории КЭШБЭК, где
-    dataframe - данные с транзакциями в формате pd.DataFrame,
-    year - год, за который проводится анализ,
-    month - месяц, за который проводится анализ.
+    """Полуение анализа категории КЭШБЭК в формате JSON,
+
+    Attributes:
+        dataframe: DataFrame - данные с транзакциями в формате pd.DataFrame,
+        year: str - год, за который проводится анализ,
+        month: str - месяц, за который проводится анализ.
     """
     logger.info("Анализ категорий кэшбэк")
-
     try:
         # Формируем начальную дату - первый день месяца нужного года
         start_date_cash = datetime.strptime(f"{year}-{month}-01", "%Y-%m-%d").strftime("%d/%m/%Y")
